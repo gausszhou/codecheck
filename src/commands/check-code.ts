@@ -1,12 +1,24 @@
 import { findFiles, processEachFile } from '@/utils/file.js';
+import Table from 'cli-table3';
 
 interface CodeStats {
   totalLines: number;
   totalChars: number;
   totalTokens: number;
-  largeFiles: Array<{ path: string; lines: number }>;
-  largeFunctions: Array<{ path: string; name: string; lines: number }>;
-  languageStats: Map<string, { lines: number; chars: number; files: number }>;
+  codeLines: number;
+  commentLines: number;
+  blankLines: number;
+  totalFunctions: number;
+  languageStats: Map<string, { 
+    lines: number; 
+    chars: number; 
+    files: number; 
+    tokens: number;
+    codeLines: number;
+    commentLines: number;
+    blankLines: number;
+    functions: number;
+  }>;
 }
 
 const LANGUAGE_EXTENSIONS: Record<string, string[]> = {
@@ -93,13 +105,58 @@ function detectFunctions(content: string): Array<{ name: string; lines: number }
   return functions;
 }
 
+function analyzeCodeLines(content: string): { codeLines: number; commentLines: number; blankLines: number } {
+  const lines = content.split('\n');
+  let codeLines = 0;
+  let commentLines = 0;
+  let blankLines = 0;
+  let inBlockComment = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    if (trimmed === '') {
+      blankLines++;
+      continue;
+    }
+    
+    if (inBlockComment) {
+      commentLines++;
+      if (trimmed.includes('*/')) {
+        inBlockComment = false;
+      }
+      continue;
+    }
+    
+    if (trimmed.startsWith('/*')) {
+      commentLines++;
+      if (!trimmed.includes('*/')) {
+        inBlockComment = true;
+      }
+      continue;
+    }
+    
+    if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('<!--')) {
+      commentLines++;
+      continue;
+    }
+    
+    if (trimmed.startsWith('*') && !trimmed.startsWith('* ')) {
+      commentLines++;
+      continue;
+    }
+    
+    codeLines++;
+  }
+
+  return { codeLines, commentLines, blankLines };
+}
+
 export function checkCode(pattern: string) {
-  console.log('📊 开始代码统计...', pattern);
-  
   const filePathList = findFiles(pattern);
   
   if (filePathList.length === 0) {
-    console.log('✅ 未找到任何文件');
+    console.log('No files found');
     return;
   }
   
@@ -107,8 +164,10 @@ export function checkCode(pattern: string) {
     totalLines: 0,
     totalChars: 0,
     totalTokens: 0,
-    largeFiles: [],
-    largeFunctions: [],
+    codeLines: 0,
+    commentLines: 0,
+    blankLines: 0,
+    totalFunctions: 0,
     languageStats: new Map(),
   };
   
@@ -118,73 +177,78 @@ export function checkCode(pattern: string) {
     const charCount = content.length;
     const tokenCount = estimateTokens(content);
     const language = getLanguage(filePath);
+    const codeAnalysis = analyzeCodeLines(content);
+    const functions = detectFunctions(content);
     
     stats.totalLines += lineCount;
     stats.totalChars += charCount;
     stats.totalTokens += tokenCount;
+    stats.codeLines += codeAnalysis.codeLines;
+    stats.commentLines += codeAnalysis.commentLines;
+    stats.blankLines += codeAnalysis.blankLines;
+    stats.totalFunctions += functions.length;
     
-    if (lineCount > 1000) {
-      stats.largeFiles.push({
-        path: filePath,
-        lines: lineCount,
-      });
-    }
-    
-    const functions = detectFunctions(content);
-    functions.forEach(func => {
-      stats.largeFunctions.push({
-        path: filePath,
-        name: func.name,
-        lines: func.lines,
-      });
-    });
-    
-    const langStats = stats.languageStats.get(language) || { lines: 0, chars: 0, files: 0 };
+    const langStats = stats.languageStats.get(language) || { 
+      lines: 0, 
+      chars: 0, 
+      files: 0, 
+      tokens: 0,
+      codeLines: 0,
+      commentLines: 0,
+      blankLines: 0,
+      functions: 0,
+    };
     langStats.lines += lineCount;
     langStats.chars += charCount;
     langStats.files += 1;
+    langStats.tokens += tokenCount;
+    langStats.codeLines += codeAnalysis.codeLines;
+    langStats.commentLines += codeAnalysis.commentLines;
+    langStats.blankLines += codeAnalysis.blankLines;
+    langStats.functions += functions.length;
     stats.languageStats.set(language, langStats);
   });
   
-  console.log('\n📈 代码统计结果\n');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📄 总文件数: ${filePathList.length}`);
-  console.log(`📝 总行数: ${stats.totalLines.toLocaleString()}`);
-  console.log(`🔤 总字符数: ${stats.totalChars.toLocaleString()}`);
-  console.log(`🎯 估算 Token 数: ${stats.totalTokens.toLocaleString()}`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-  
-  console.log('🌍 按语言统计:');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('By Language:');
   const sortedLanguages = Array.from(stats.languageStats.entries())
     .sort((a, b) => b[1].lines - a[1].lines);
   
-  sortedLanguages.forEach(([language, data]) => {
-    const percentage = ((data.lines / stats.totalLines) * 100).toFixed(1);
-    console.log(`  ${language}:`);
-    console.log(`    文件数: ${data.files}`);
-    console.log(`    行数: ${data.lines.toLocaleString()} (${percentage}%)`);
-    console.log(`    字符数: ${data.chars.toLocaleString()}`);
+  const languageTable = new Table({
+    head: ['Language', 'Files', 'Lines', 'Code', 'Comment', 'Blank', 'Avg Lines', 'Characters', 'Tokens', 'Functions'],
+    style: {
+      head: [],
+      border: ['grey'],
+    },
   });
   
-  if (stats.largeFiles.length > 0) {
-    console.log('\n⚠️  超大文件 (>1000 行):');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    stats.largeFiles.forEach(file => {
-      console.log(`  📁 ${file.path}`);
-      console.log(`     行数: ${file.lines.toLocaleString()}`);
-    });
-  }
+  const avgLinesAll = (stats.totalLines / filePathList.length).toFixed(1);
+  languageTable.push([
+    'ALL',
+    filePathList.length.toString(),
+    stats.totalLines.toLocaleString(),
+    stats.codeLines.toLocaleString(),
+    stats.commentLines.toLocaleString(),
+    stats.blankLines.toLocaleString(),
+    avgLinesAll,
+    stats.totalChars.toLocaleString(),
+    stats.totalTokens.toLocaleString(),
+    stats.totalFunctions.toString(),
+  ]);
   
-  if (stats.largeFunctions.length > 0) {
-    console.log('\n⚠️  大函数 (>50 行):');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    stats.largeFunctions.forEach(func => {
-      console.log(`  🔧 ${func.name}()`);
-      console.log(`     文件: ${func.path}`);
-      console.log(`     行数: ${func.lines}`);
-    });
-  }
-  
-  console.log('\n✅ 统计完成');
+  sortedLanguages.forEach(([language, data]) => {
+    const avgLines = (data.lines / data.files).toFixed(1);
+    languageTable.push([
+      language,
+      data.files.toString(),
+      data.lines.toLocaleString(),
+      data.codeLines.toLocaleString(),
+      data.commentLines.toLocaleString(),
+      data.blankLines.toLocaleString(),
+      avgLines,
+      data.chars.toLocaleString(),
+      data.tokens.toLocaleString(),
+      data.functions.toString(),
+    ]);
+  });
+  console.log(languageTable.toString());
 }

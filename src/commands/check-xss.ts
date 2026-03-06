@@ -113,13 +113,11 @@ const USER_INPUT_PATTERNS = [
 ];
 
 export function checkXSS(pattern: string) {
-  console.log('🔍 开始 XSS 安全检查...', pattern);
-  
   const filePathList = findFiles(pattern);
   const issues: XSSIssue[] = [];
 
   if (filePathList.length === 0) {
-    console.log('✅ 未找到任何文件');
+    console.log('No files found');
     return;
   }
 
@@ -158,47 +156,17 @@ export function checkXSS(pattern: string) {
   });
 
   if (issues.length === 0) {
-    console.log('✅ 未发现 XSS 安全问题');
+    console.log('No XSS security issues found');
   } else {
-    console.log(`\n⚠️  发现 ${issues.length} 个潜在的安全问题:\n`);
+    issues.forEach(issue => {
+      const severity = issue.severity === 'high' ? 'error' : issue.severity === 'medium' ? 'warn' : 'warning';
+      console.log(`${issue.filePath}:${issue.line}:1  ${severity}  ${issue.message}  security/xss`);
+    });
     
     const highIssues = issues.filter(issue => issue.severity === 'high');
     const mediumIssues = issues.filter(issue => issue.severity === 'medium');
     const lowIssues = issues.filter(issue => issue.severity === 'low');
-
-    if (highIssues.length > 0) {
-      console.log('🔴 高危问题:');
-      highIssues.forEach(issue => {
-        console.log(`  文件: ${issue.filePath}:${issue.line}`);
-        console.log(`  类型: ${issue.type}`);
-        console.log(`  问题: ${issue.message}`);
-        console.log(`  代码: ${issue.code}`);
-        console.log('');
-      });
-    }
-
-    if (mediumIssues.length > 0) {
-      console.log('🟡 中危问题:');
-      mediumIssues.forEach(issue => {
-        console.log(`  文件: ${issue.filePath}:${issue.line}`);
-        console.log(`  类型: ${issue.type}`);
-        console.log(`  问题: ${issue.message}`);
-        console.log(`  代码: ${issue.code}`);
-        console.log('');
-      });
-    }
-
-    if (lowIssues.length > 0) {
-      console.log('🟢 低危问题:');
-      lowIssues.forEach(issue => {
-        console.log(`  文件: ${issue.filePath}:${issue.line}`);
-        console.log(`  类型: ${issue.type}`);
-        console.log(`  问题: ${issue.message}`);
-        console.log(`  代码: ${issue.code}`);
-        console.log('');
-      });
-    }
-
-    console.log(`\n📊 统计: 高危 ${highIssues.length} | 中危 ${mediumIssues.length} | 低危 ${lowIssues.length}`);
+    
+    console.log(`\n${issues.length} problems (${highIssues.length} errors, ${mediumIssues.length} warnings, ${lowIssues.length} warnings)`);
   }
 }
