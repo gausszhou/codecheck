@@ -1,4 +1,5 @@
 import { findFiles, processEachFile } from '@/utils/file.js';
+import chalk from 'chalk';
 
 interface XSSIssue {
   filePath: string;
@@ -156,17 +157,26 @@ export function checkXSS(pattern: string) {
   });
 
   if (issues.length === 0) {
-    console.log('No XSS security issues found');
+    console.log(chalk.green('No XSS security issues found'));
   } else {
     issues.forEach(issue => {
-      const severity = issue.severity === 'high' ? 'error' : issue.severity === 'medium' ? 'warn' : 'warning';
-      console.log(`${issue.filePath}:${issue.line}:1  ${severity}  ${issue.message}  security/xss`);
+      let severityColor: string;
+      
+      if (issue.severity === 'high') {
+        severityColor = chalk.red('error');
+      } else if (issue.severity === 'medium') {
+        severityColor = chalk.yellow('warn');
+      } else {
+        severityColor = chalk.blue('warning');
+      }
+      
+      console.log(`${issue.filePath}:${issue.line}:1  ${severityColor}  ${issue.message}  security/xss`);
     });
     
     const highIssues = issues.filter(issue => issue.severity === 'high');
     const mediumIssues = issues.filter(issue => issue.severity === 'medium');
     const lowIssues = issues.filter(issue => issue.severity === 'low');
     
-    console.log(`\n${issues.length} problems (${highIssues.length} errors, ${mediumIssues.length} warnings, ${lowIssues.length} warnings)`);
+    console.log(`\n${chalk.red(`${highIssues.length} errors`)}, ${chalk.yellow(`${mediumIssues.length} warnings`)}, ${chalk.blue(`${lowIssues.length} warnings`)}`);
   }
 }
