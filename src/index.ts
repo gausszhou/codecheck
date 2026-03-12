@@ -21,7 +21,7 @@ program
         checkArticle(`${path}/**/*.{md,mdx}`);
         break;
       case "code":
-        checkCode(`${path}/**/*.{js,jsx,ts,tsx}`);
+        checkCode(`${path}/**/*.{js,jsx,ts,tsx,json,css,scss,html,md,mdx,vue}`);
         break;
       case "xss":
         checkXSS(`${path}/**/*.{js,jsx,ts,tsx,vue,html}`);

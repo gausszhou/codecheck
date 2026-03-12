@@ -28,6 +28,7 @@ const LANGUAGE_EXTENSIONS: Record<string, string[]> = {
   CSS: ['.css', '.scss', '.sass', '.less'],
   JSON: ['.json'],
   Markdown: ['.md', '.mdx'],
+  Vue: ['.vue'],
 };
 
 function getLanguage(filePath: string): string {
