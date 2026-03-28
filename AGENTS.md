@@ -108,14 +108,11 @@ src/
 ## CLI Commands
 
 ```bash
-# Check articles
-codecheck check article --path <directory>
+# 统计代码
+codecheck stat --path <directory>
 
-# Check code
-codecheck check code --path <directory>
-
-# Check XSS vulnerabilities
-codecheck check xss --path <directory>
+# 检查 XSS 漏洞
+codecheck xss --path <directory>
 ```
 
 ## Best Practices

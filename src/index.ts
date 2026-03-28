@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { program } from "commander";
-import { checkCode } from "./commands/check-code.js";
-import { checkArticle } from "./commands/check-article.js";
-import { checkXSS } from "./commands/check-xss.js";
+import { checkCode } from "./commands/stat.js";
+import { checkXSS } from "./commands/xss.js";
 
 program
   .name('codecheck')
@@ -10,25 +9,21 @@ program
   .description('An example CLI tool');
 
 program
-  .command("check")
-  .description("检查代码或文章")
-  .argument("<type>", "指定检查类型，可选值：article, code, xss")
-  .option("--path <path>", "指定代码或文章所在目录")
-  .action((type, options) => {
-    const { path = "src" } = options;
-    switch (type) {
-      case "article":
-        checkArticle(`${path}/**/*.{md,mdx}`);
-        break;
-      case "code":
-        checkCode(`${path}/**/*.{js,jsx,ts,tsx,json,css,scss,html,md,mdx,vue}`);
-        break;
-      case "xss":
-        checkXSS(`${path}/**/*.{js,jsx,ts,tsx,vue,html}`);
-        break;
-      default:
-        console.log("请指定检查类型: article, code, xss");
-    }
+  .command("stat")
+  .description("统计代码行数、字符数等信息")
+  .option("--path <path>", "指定代码所在目录", "src")
+  .action((options) => {
+    const { path } = options;
+    checkCode(`${path}/**/*.{js,jsx,ts,tsx,json,css,scss,html,md,mdx,vue}`);
+  });
+
+program
+  .command("xss")
+  .description("检查 XSS 漏洞")
+  .option("--path <path>", "指定代码所在目录", "src")
+  .action((options) => {
+    const { path } = options;
+    checkXSS(`${path}/**/*.{js,jsx,ts,tsx,vue,html}`);
   });
 
 program.parse(process.argv);

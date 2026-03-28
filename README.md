@@ -4,8 +4,7 @@
 
 ## 功能特性
 
-- 📝 **文章检查**: 检查 Markdown/MDX 文件的内容规范
-- 🔍 **代码检查**: 检查 JavaScript/TypeScript 文件
+- 📊 **代码统计**: 统计代码行数、字符数、函数数等信息
 - 🛡️ **XSS 检查**: 检查 HTML 文件中的 XSS 漏洞
 - 🎯 **灵活配置**: 支持自定义检查路径
 - ⚡ **快速高效**: 基于 Glob 模式匹配，快速定位文件
@@ -22,7 +21,6 @@ npm install -g codecheck
 
 ```bash
 codecheck <command> [options]
-codecheck check article --path packages # 检查文章是否符合规范
-codecheck check code --path packages # 检查代码是否符合规范
-codecheck check xss --path packages # 检查 XSS 漏洞
+codecheck stat --path packages # 统计代码行数
+codecheck xss --path packages # 检查 XSS 漏洞
 ```
